@@ -4,7 +4,7 @@
     "displayName": "Lightning Notes",
     "description": "Quickly create or open a notes file for the day.",
     "version": "0.1.0",
-    "license": "MIT",
+    "license": "SEE LICENSE IN LICENSE.md",
     "engines": {
         "vscode": "^1.97.0"
     },
