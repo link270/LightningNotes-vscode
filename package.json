@@ -4,15 +4,15 @@
     "displayName": "Lightning Notes",
     "description": "Quickly create or open a notes file for the day.",
     "version": "0.1.0",
+    "license": "MIT",
     "engines": {
-        "vscode": "^1.70.0"
+        "vscode": "^1.97.0"
     },
     "categories": [
         "Notebooks", "Other"
     ],
     "activationEvents": [
-        "onStartupFinished",
-        "onCommand:quick-notes.openNote"
+        "onStartupFinished"
     ],
     "pricing": "Free",
     "author": {
