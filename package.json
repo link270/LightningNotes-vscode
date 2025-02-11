@@ -1,0 +1,87 @@
+{
+    "name": "lightning-notes",
+    "publisher": "Link270",
+    "displayName": "Lightning Notes",
+    "description": "Quickly create or open a notes file for the day.",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.70.0"
+    },
+    "categories": [
+        "Notebooks", "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished",
+        "onCommand:quick-notes.openNote"
+    ],
+    "pricing": "Free",
+    "author": {
+        "name": "Mitch"
+    },
+    "main": "./out/extensions.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/link270/LightningNotes-vscode.git"
+    },
+    "icon": "images/icon.png",
+    "galleryBanner": {
+        "color": "#00B3A4",
+        "theme": "dark"
+    },
+    "homepage": "https://github.com/link270/LightningNotes-vscode/blob/main/README.md",
+    "contributes": {
+        "commands": [
+            {
+                "command": "quick-notes.openNote",
+                "title": "Lightning Notes: Create or Open Today's Note"
+            },
+            {
+                "command": "quick-notes.openSettings",
+                "title": "Lightning Notes: Open Settings"
+            },
+            {
+                "command": "quick-notes.openTemplateFile",
+                "title": "Lightning Notes: Open the currently set quick notes template file"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Lightning Notes Configuration",
+            "properties": {
+                "quickNotes.notesDirectory": {
+                    "type": "string",
+                    "default": "/path/to/your/notes/folder",
+                    "description": "Path to the root folder where lightning note files are saved."
+                },
+                "quickNotes.templateFileName": {
+                    "type": "string",
+                    "default": "lightning-notes-template.md",
+                    "description": "Name of the template file to use in the lightning notes templates folder."
+                },
+                "quickNotes.fileNameFormat": {
+                    "type": "string",
+                    "default": "{{TODAY}}_Lightning-Note",
+                    "description": "Format of the note filename. {{TODAY}} will be replaced with the current date based on the dateFormat property."
+                },
+                "quickNotes.dateFormat": {
+                    "type": "string",
+                    "default": "MM-DD-YYYY",
+                    "description": "Date format used in lightning note filenames. Month must be represented by MM, day by DD and year by YY or YYYY. Any part of the date may be omitted, if more than 2 (D, M) or 4 (Y) format characters are included they will be ignored."
+                },
+                "quickNotes.fileExtension": {
+                    "type": "string",
+                    "default": ".md",
+                    "description": "File extension for your lightning notes (e.g., .md, .txt, etc.)."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "compile": "tsc -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^14.18.63",
+        "@types/vscode": "^1.97.0",
+        "typescript": "^4.9.5"
+    }
+}
