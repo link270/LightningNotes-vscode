@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+import { NotesTreeDataProvider } from './NotesTreeDataProvider';
+
 function getDefaultDocumentsFolder(): string {
   const home = os.homedir();
   return path.join(home, 'Documents'); 
@@ -18,17 +20,19 @@ async function getDefaultTemplate(context: vscode.ExtensionContext, templateFile
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  // Register the command
-  const disposable = vscode.commands.registerCommand('quick-notes.openNote', async () => {
+  /*
+  // Setup command for creating and/or opening a new/existing note.
+  */
+  const openNoteDisposable = vscode.commands.registerCommand('quick-notes.openNote', async () => {
     try {
       // Read config from settings
       const config = vscode.workspace.getConfiguration('quickNotes');
       let notesDir: string | undefined = config.get('notesDirectory');
       const templateFileName: string = config.get('templateFileName') || 'quick-notes-template.md';
       let defaultTemplate = await getDefaultTemplate(context, templateFileName);
-      const fileNameFormat: string = config.get("fileNameFormat") || 'Quick-Note-{{DATE}}';
-      const fileExtension: string = config.get('fileExtension') || '.txt';
+      const fileNameFormat: string = config.get("fileNameFormat") || '{{TODAY}}_Lightning-Note';
       const dateFormat: string = config.get('dateFormat') || 'YYYY-MM-DD';
+      const fileExtension: string = config.get('fileExtension') || '.md';
 
       if (!notesDir || !fs.existsSync(notesDir)) {
         const defaultDocsPath = getDefaultDocumentsFolder();
@@ -79,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
             const curYearPart: string = year[yearIndex] ? year[yearIndex] : '';
             dateString += curYearPart;
             yearIndex++;
-            break
+            break;
           default:
             dateString += char;
             break;
@@ -109,15 +113,16 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(disposable);
-
-
+  /*
+  // Setup command for opening the settings menu for the// Register the command
+  */
   const openSettingsDisposable = vscode.commands.registerCommand('quick-notes.openSettings', async () => {
     vscode.commands.executeCommand('workbench.action.openSettings', 'quickNotes');
   });
 
-  context.subscriptions.push(openSettingsDisposable);
-
+  /*
+  // Setup Command for opening the raw template file.
+  */
 
   const openTemplateDisposable = vscode.commands.registerCommand('quick-notes.openTemplateFile', async () => {
     try{
@@ -134,21 +139,46 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  context.subscriptions.push(openTemplateDisposable);
-
-
+  /*
+  // Setup status bar icon.
+  */
   const statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left, // or Right
     100 // priority: smaller = further left if alignment is the same
   );
 
-  statusBarItem.text = '$(notebook) Quick Note'; 
+  statusBarItem.text = '$(notebook) Lightning Note'; 
   // There are many built-in icons you can use, e.g. "$(notebook)", "$(pencil)", etc.
   // Full list: https://code.visualstudio.com/api/references/icons
-  statusBarItem.tooltip = 'Open Today’s Quick Note';
+  statusBarItem.tooltip = 'Open Today’s Lightning Note';
   statusBarItem.command = 'quick-notes.openNote'; // command ID you registered
   statusBarItem.show();
+
+  /*
+  // Setup Activity bar tab
+  */
+  const config = vscode.workspace.getConfiguration('quickNotes');
+
+  const notesProvider = new NotesTreeDataProvider(config);
+  vscode.window.registerTreeDataProvider('quickNotesView', notesProvider);
+
+  const openNoteActivityBarDisposable = vscode.commands.registerCommand('quick-notes.openNoteFile', (filePath: string) => {
+    vscode.workspace.openTextDocument(filePath).then(doc => {
+      vscode.window.showTextDocument(doc);
+    });
+  })
+  
+  const refreshActivityBarDisposable = vscode.commands.registerCommand('quick-notes.refreshNotes', () => {
+    notesProvider.refresh();
+  })
+
+
+  context.subscriptions.push(openNoteDisposable);
+  context.subscriptions.push(openSettingsDisposable);
+  context.subscriptions.push(openTemplateDisposable);
   context.subscriptions.push(statusBarItem);
+  context.subscriptions.push(openNoteActivityBarDisposable);
+  context.subscriptions.push(refreshActivityBarDisposable);
 }
 
 export function deactivate() {

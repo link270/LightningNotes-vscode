@@ -44,6 +44,24 @@
                 "title": "Lightning Notes: Open the currently set quick notes template file"
             }
         ],
+
+        "viewsContainers": {
+            "activitybar": [
+                {
+                "id": "quickNotes",
+                "title": "Lightning Notes",
+                "icon": "images/activitybaricon.svg"
+                }
+            ]
+            },
+            "views": {
+            "quickNotes": [
+                {
+                "id": "quickNotesView",
+                "name": "All Notes"
+                }
+            ]
+        },
         "configuration": {
             "type": "object",
             "title": "Lightning Notes Configuration",
