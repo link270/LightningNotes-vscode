@@ -3,13 +3,14 @@
     "publisher": "Link270",
     "displayName": "Lightning Notes",
     "description": "Quickly create or open a notes file for the day.",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "SEE LICENSE IN LICENSE.md",
     "engines": {
         "vscode": "^1.97.0"
     },
     "categories": [
-        "Notebooks", "Other"
+        "Notebooks",
+        "Other"
     ],
     "activationEvents": [
         "onStartupFinished"
@@ -44,21 +45,20 @@
                 "title": "Lightning Notes: Open the currently set quick notes template file"
             }
         ],
-
         "viewsContainers": {
             "activitybar": [
                 {
-                "id": "quickNotes",
-                "title": "Lightning Notes",
-                "icon": "images/activitybaricon.svg"
+                    "id": "quickNotes",
+                    "title": "Lightning Notes",
+                    "icon": "images/activitybaricon.svg"
                 }
             ]
-            },
-            "views": {
+        },
+        "views": {
             "quickNotes": [
                 {
-                "id": "quickNotesView",
-                "name": "All Notes"
+                    "id": "quickNotesView",
+                    "name": "All Notes"
                 }
             ]
         },
