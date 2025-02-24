@@ -20,13 +20,16 @@ async function getDefaultTemplate(context: vscode.ExtensionContext, templateFile
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  const config = vscode.workspace.getConfiguration('quickNotes');
+  const notesProvider = new NotesTreeDataProvider(config);
+  const notesTreeView = vscode.window.createTreeView('quickNotesView', {treeDataProvider: notesProvider});
   /*
   // Setup command for creating and/or opening a new/existing note.
   */
   const openNoteDisposable = vscode.commands.registerCommand('quick-notes.openNote', async () => {
     try {
       // Read config from settings
-      const config = vscode.workspace.getConfiguration('quickNotes');
+      // const config = vscode.workspace.getConfiguration('quickNotes');
       let notesDir: string | undefined = config.get('notesDirectory');
       const templateFileName: string = config.get('templateFileName') || 'quick-notes-template.md';
       let defaultTemplate = await getDefaultTemplate(context, templateFileName);
@@ -99,6 +102,11 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage('Creating today’s note...');
         defaultTemplate = defaultTemplate.replace('{{TODAY}}', dateString)
         fs.writeFileSync(todayFilePath, defaultTemplate, { encoding: 'utf-8' });
+
+        // Refresh activitybar notes list.
+        if(notesProvider){
+          notesProvider.refresh();
+        }
       }
       else
       {
@@ -108,6 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
       // Open the existing or newly created file
       const document = await vscode.workspace.openTextDocument(todayFilePath);
       await vscode.window.showTextDocument(document);
+
     } catch (error) {
       vscode.window.showErrorMessage(`Could not open daily note: ${error}`);
     }
@@ -155,13 +164,8 @@ export function activate(context: vscode.ExtensionContext) {
   statusBarItem.show();
 
   /*
-  // Setup Activity bar tab
+  // Activity bar tab commands
   */
-  const config = vscode.workspace.getConfiguration('quickNotes');
-
-  const notesProvider = new NotesTreeDataProvider(config);
-  vscode.window.registerTreeDataProvider('quickNotesView', notesProvider);
-
   const openNoteActivityBarDisposable = vscode.commands.registerCommand('quick-notes.openNoteFile', (filePath: string) => {
     vscode.workspace.openTextDocument(filePath).then(doc => {
       vscode.window.showTextDocument(doc);
@@ -171,6 +175,39 @@ export function activate(context: vscode.ExtensionContext) {
   const refreshActivityBarDisposable = vscode.commands.registerCommand('quick-notes.refreshNotes', () => {
     notesProvider.refresh();
   })
+  
+  const alwaysRefresh: boolean = config.get('autoRefreshAlwaysOn') || true;
+  if(alwaysRefresh){
+    const fileExtension: string = config.get('fileExtension') || '.md';
+    const notesDir: string = config.get('notesDirectory') || '.';
+    // Setup file watcher to add new files to the tree when new files are added to the folder.
+    const watcher = fs.watch(notesDir, (eventType, filename) => {
+      // if filename ends with .md or .txt, etc., refresh
+      if (filename.endsWith(fileExtension)) {
+        notesProvider.refresh();
+      }
+
+      context.subscriptions.push({dispose: () => watcher.close()});
+    });
+  }
+
+  const highlightNoteActivityBarDisposable = vscode.window.onDidChangeActiveTextEditor(editor => {
+    if (!editor?.document) {
+      return;
+    }
+
+    const fsPath = editor.document.uri.fsPath;
+
+    const noteItem = notesProvider.getNoteItemForFile(fsPath);
+    if (noteItem) {
+      // Reveal the note in the tree
+      notesTreeView.reveal(noteItem, {
+        select: true,
+        focus: false,
+        expand: true
+      });
+    }
+  })
 
 
   context.subscriptions.push(openNoteDisposable);
@@ -179,8 +216,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(statusBarItem);
   context.subscriptions.push(openNoteActivityBarDisposable);
   context.subscriptions.push(refreshActivityBarDisposable);
-}
+  context.subscriptions.push(highlightNoteActivityBarDisposable);
+};
 
 export function deactivate() {
   // Cleanup if necessary
-}
+};
+

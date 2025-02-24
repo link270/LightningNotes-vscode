@@ -90,6 +90,11 @@
                     "type": "string",
                     "default": ".md",
                     "description": "File extension for your lightning notes (e.g., .md, .txt, etc.)."
+                },
+                "quickNotes.autoRefreshAlwaysOn": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "When enabled the notes directory will be watched. When a new file is added to the directory it will auto update the notes list. When disabled the notes list will only auto update when a new note is created or the extension refreshed."
                 }
             }
         }

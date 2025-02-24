@@ -8,8 +8,11 @@ export class NotesTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
   readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | void> 
     = this._onDidChangeTreeData.event;
 
-    private notesDirectory: string;
-    private dateFormat: string;
+  private notesDirectory: string;
+  private dateFormat: string;
+  private noteItemsByPath = new Map<string, NoteItem>();
+  private monthParentByNote = new Map<NoteItem, MonthItem>();
+  private yearParentByMonth = new Map<MonthItem, YearItem>();
 
   constructor(config: vscode.WorkspaceConfiguration) {
     this.notesDirectory = config.get<string>('notesDirectory') || '.';
@@ -17,6 +20,9 @@ export class NotesTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
   }
 
   public refresh(): void {
+    this.monthParentByNote.clear();
+    this.yearParentByMonth.clear();
+    this.noteItemsByPath.clear();
     this._onDidChangeTreeData.fire();
   }
 
@@ -27,26 +33,54 @@ export class NotesTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
 
     // If the element is a YearItem, return its months
     if (element instanceof YearItem) {
-        return element.getMonthItems();
+        return element.getMonthItems(this);
     }
 
     // If the element is a MonthItem, return its notes
     if (element instanceof MonthItem) {
-        return element.getNoteItems();
+        return element.getNoteItems(this, (noteItem) => {
+          // While constructing these NoteItems, store them in our Map
+          this.noteItemsByPath.set(noteItem.filePath, noteItem);
+        });
     }
 
     // Otherwise, no children
     return [];
   }
 
+  public getParent(element: vscode.TreeItem): vscode.TreeItem | null {
+    if (element instanceof NoteItem) {
+      // get the MonthItem from our map
+      return this.monthParentByNote.get(element) ?? null;
+    } else if (element instanceof MonthItem) {
+      // get the YearItem from our map
+      return this.yearParentByMonth.get(element) ?? null;
+    } else if (element instanceof YearItem) {
+      return null; // top-level => no parent
+    }
+    return null;
+  }
+
+  public getNoteItemForFile(fsPath: string): NoteItem | undefined {
+    return this.noteItemsByPath.get(fsPath);
+  }
+
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
     return element;
+  }
+
+  public registerMonthParent(childNote: NoteItem, parentMonth: MonthItem) {
+    this.monthParentByNote.set(childNote, parentMonth);
+  }
+  public registerYearParent(childMonth: MonthItem, parentYear: YearItem) {
+    this.yearParentByMonth.set(childMonth, parentYear);
   }
 
   private getYearItems(): vscode.TreeItem[] {
     if (!fs.existsSync(this.notesDirectory)) {
       return [];
     }
+
     const files = fs.readdirSync(this.notesDirectory);
 
     let regexString: string = '';
@@ -108,8 +142,6 @@ export class NotesTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
         datePartIndexMap['Y'].forEach(yearIndex => {
             year += match[0][yearIndex];
         });
-
-        console.log(year)
       }
 
       if (!filesByYear[year]) {
@@ -140,7 +172,7 @@ export class YearItem extends vscode.TreeItem {
       this.iconPath = new vscode.ThemeIcon('calendar'); 
     }
   
-    public getMonthItems(): MonthItem[] {
+    public getMonthItems(provider: NotesTreeDataProvider): MonthItem[] {
         const filesByMonth: Record<string, string[]> = {};
     
         for (const file of this.filesForYear) {
@@ -162,29 +194,35 @@ export class YearItem extends vscode.TreeItem {
   
         // Build a MonthItem for each month
         return Object.keys(filesByMonth).sort().map(m => {
-            return new MonthItem(this.year, m, filesByMonth[m], this.notesDirectory);
+            const monthItem = new MonthItem(this.year, m, filesByMonth[m], this.notesDirectory);
+            provider.registerYearParent(monthItem, this);
+            return monthItem;
         });
     }
 }
 
 export class MonthItem extends vscode.TreeItem {
-    constructor(
-      public readonly year: string,
-      public readonly month: string,
-      private filesForMonth: string[],
-      private notesDir: string
-    ) {
-        super(`${getMonthName(month)}`, vscode.TreeItemCollapsibleState.Collapsed);
-        this.iconPath = new vscode.ThemeIcon('notebook'); 
-    }
+  constructor(
+    public readonly year: string,
+    public readonly month: string,
+    private filesForMonth: string[],
+    private notesDir: string
+  ) {
+      super(`${getMonthName(month)}`, vscode.TreeItemCollapsibleState.Collapsed);
+      this.iconPath = new vscode.ThemeIcon('notebook'); 
+  }
   
-    public getNoteItems(): NoteItem[] {
-        // Return a TreeItem for each file in this month
-        return this.filesForMonth.sort().map(file => {
-            const filePath = path.join(this.notesDir, file);
-            return new NoteItem(file, filePath);
-        });
+  public getNoteItems(provider: NotesTreeDataProvider, addToMap: (n: NoteItem) => void): NoteItem[] {
+    const items: NoteItem[] = [];
+    for (const file of this.filesForMonth) {
+      const filePath = path.join(this.notesDir, file);
+      const noteItem = new NoteItem(file, filePath);
+      addToMap(noteItem);
+      provider.registerMonthParent(noteItem, this);
+      items.push(noteItem);
     }
+    return items;
+  }
 }
 
 export class NoteItem extends vscode.TreeItem {
